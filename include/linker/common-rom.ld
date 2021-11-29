@@ -140,6 +140,10 @@
 	ITERABLE_SECTION_ROM(bt_mesh_proxy_cb, 4)
 #endif
 
+#if defined(CONFIG_BT_HAS)
+	ITERABLE_SECTION_ROM(bt_has_preset, 4)
+#endif
+
 #if defined(CONFIG_EC_HOST_CMD)
 	ITERABLE_SECTION_ROM(ec_host_cmd_handler, 4)
 #endif
