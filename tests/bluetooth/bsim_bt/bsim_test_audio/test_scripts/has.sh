@@ -52,3 +52,5 @@ for PROCESS_ID in $PROCESS_IDS; do
 done
 
 exit $EXIT_CODE #the last exit code != 0
+
+
