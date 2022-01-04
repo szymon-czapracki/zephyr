@@ -23,7 +23,7 @@ function compile(){
   local conf_file="${conf_file:-prj.conf}"
   local cmake_args="${cmake_args:-"-DCONFIG_COVERAGE=y"}"
   local ninja_args="${ninja_args:-""}"
-  local cc_flags="${cc_flags:-"-Werror"}"
+  local cc_flags="${cc_flags:-"-Wno-stringop-overflow"}"
 
   local exe_name="${exe_name:-bs_${BOARD}_${app}_${conf_file}}"
   local exe_name=${exe_name//\//_}

@@ -24,7 +24,7 @@ BOARD="${BOARD:-nrf52_bsim}"
 
 cd ${EDTT_PATH}
 
-Execute ./src/edttool.py -s=${SIMULATION_ID} -d=0 --transport bsim \
+Execute python3.9 ./src/edttool.py -s=${SIMULATION_ID} -d=0 --transport bsim \
   -T $TEST_MODULE -C $TEST_FILE -v=${VERBOSITY_LEVEL}
 
 cd ${BSIM_OUT_PATH}/bin
