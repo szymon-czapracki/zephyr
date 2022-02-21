@@ -293,7 +293,7 @@ static void ascs_iso_recv(struct bt_iso_chan *chan,
 {
 	struct bt_audio_iso *audio_iso = CONTAINER_OF(chan, struct bt_audio_iso,
 						      iso_chan);
-	struct bt_audio_ep *ep = audio_iso->ep;
+	struct bt_audio_ep *ep = audio_iso->sink_ep;
 	const struct bt_audio_stream_ops *ops;
 
 	if (ep == NULL) {
@@ -328,7 +328,15 @@ static void ascs_iso_connected(struct bt_iso_chan *chan)
 {
 	struct bt_audio_iso *audio_iso = CONTAINER_OF(chan, struct bt_audio_iso,
 						      iso_chan);
-	struct bt_audio_ep *ep = audio_iso->ep;
+	struct bt_audio_ep *source_ep = audio_iso->source_ep;
+	struct bt_audio_ep *sink_ep = audio_iso->sink_ep;
+	struct bt_audio_ep *ep;
+
+	if (&sink_ep->iso->iso_chan == chan) {
+		ep = sink_ep;
+	} else {
+		ep = source_ep;
+	}
 
 	if (ep == NULL) {
 		BT_ERR("Could not lookup ep by iso %p", chan);
@@ -350,9 +358,17 @@ static void ascs_iso_disconnected(struct bt_iso_chan *chan, uint8_t reason)
 {
 	struct bt_audio_iso *audio_iso = CONTAINER_OF(chan, struct bt_audio_iso,
 						      iso_chan);
-	struct bt_audio_ep *ep = audio_iso->ep;
+	struct bt_audio_ep *source_ep = audio_iso->source_ep;
+	struct bt_audio_ep *sink_ep = audio_iso->sink_ep;
 	const struct bt_audio_stream_ops *ops;
 	struct bt_audio_stream *stream;
+	struct bt_audio_ep *ep;
+
+	if (&sink_ep->iso->iso_chan == chan) {
+		ep = sink_ep;
+	} else {
+		ep = source_ep;
+	}
 
 	if (ep == NULL) {
 		BT_ERR("Could not lookup ep by iso %p", chan);
@@ -832,7 +848,6 @@ void ascs_ep_init(struct bt_audio_ep *ep, struct bt_audio_iso *iso, uint8_t id)
 	ep->status.id = id;
 	ep->iso = iso;
 	ep->dir = ASE_DIR(id);
-	iso->ep = ep;
 
 	iso_chan = &ep->iso->iso_chan;
 
@@ -841,9 +856,11 @@ void ascs_ep_init(struct bt_audio_ep *ep, struct bt_audio_iso *iso, uint8_t id)
 
 
 	if (ep->dir == BT_AUDIO_DIR_SOURCE) {
+		iso->source_ep = ep;
 		iso_chan->qos->tx = &ep->iso_io_qos;
 		iso_chan->qos->rx = NULL;
 	} else if (ep->dir == BT_AUDIO_DIR_SINK) {
+		iso->sink_ep = ep;
 		iso_chan->qos->tx = NULL;
 		iso_chan->qos->rx = &ep->iso_io_qos;
 	} else {
