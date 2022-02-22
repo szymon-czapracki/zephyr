@@ -9,4 +9,6 @@ zephyr_sources_ifdef(CONFIG_BT_HRS hrs.c)
 
 zephyr_sources_ifdef(CONFIG_BT_TPS tps.c)
 
+zephyr_sources_ifdef(CONFIG_BT_IAS ias.c)
+
 add_subdirectory_ifdef(CONFIG_BT_OTS ots)

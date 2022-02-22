@@ -1,0 +1,17 @@
+# Bluetooth GATT Immediate Alert Service
+
+# Copyright (c) 2018 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig BT_IAS
+	bool "Enable GATT Immediate Alert Service"
+	select SENSOR
+
+if BT_IAS
+
+module = BT_IAS
+module-str = IAS
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+endif # BT_IAS
+
