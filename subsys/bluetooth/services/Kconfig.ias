@@ -1,0 +1,36 @@
+# Bluetooth GATT Immediate Alert Service
+
+# Copyright (c) 2018 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+menuconfig BT_IAS
+	bool "Enable GATT Immediate Alert Service"
+	select SENSOR
+
+if BT_IAS
+
+choice BT_IAS_DEFAULT_PERM
+	prompt "Default permissions used for IAS characteristics"
+	default BT_IAS_DEFAULT_PERM_RW
+	help
+	  Default permissions for IAS characteristic attributes
+	  used when no permission is set for the report.
+	  Used also for boot reports.
+
+config BT_IAS_DEFAULT_PERM_RW
+	bool "Read and write allowed"
+
+config BT_IAS_DEFAULT_PERM_RW_ENCRYPT
+	bool "Require encryption for access"
+
+config BT_IAS_DEFAULT_PERM_RW_AUTHEN
+	bool "Require encryption and authentication for access"
+
+endchoice
+
+module = BT_IAS
+module-str = IAS
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+endif # BT_IAS
+
