@@ -23,6 +23,12 @@ config BT_IAS_SEC_ENC
 config BT_IAS_SEC_AUTH
 	bool "Require encryption and authentication for write access"
 
+config BT_IAS_CLIENT
+	bool "Immediate Alert Service Client support"
+	select BT_GATT_CLIENT
+	help
+	  This option enables support for Immediate Alert Service Client
+
 endchoice #BT_IAS_SEC_CHOICE
 
 module = BT_IAS

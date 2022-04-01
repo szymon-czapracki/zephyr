@@ -136,8 +136,8 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
 	.disconnected = disconnected,
 };
 
-/* Immediate Alert Service Declaration */
-BT_GATT_SERVICE_DEFINE(ias_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_IAS),
+BT_GATT_SERVICE_DEFINE(ias_svc,
+	BT_GATT_PRIMARY_SERVICE(BT_UUID_IAS),
 	BT_GATT_CHARACTERISTIC(BT_UUID_ALERT_LEVEL, BT_GATT_CHRC_WRITE_WITHOUT_RESP,
-							IAS_ALERT_LEVEL_PERM, NULL,
-							bt_ias_write_alert_lvl, NULL));
+			       IAS_ALERT_LEVEL_PERM, NULL,
+			       bt_ias_write_alert_lvl, NULL));
