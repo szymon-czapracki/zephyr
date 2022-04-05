@@ -270,9 +270,12 @@ enum bt_codec_config_type {
  */
 #define BT_CODEC_LC3_META(_prefer_context, _context) \
 { \
-	 BT_CODEC_DATA(BT_CODEC_META_PREFER_CONTEXT, (_prefer_context) & 0xffu, \
-		       (_prefer_context) >> 8), \
-	 BT_CODEC_DATA(BT_CODEC_META_CONTEXT, (_context) & 0xffu, (_context) >> 8) \
+	BT_CODEC_DATA(BT_AUDIO_METADATA_TYPE_PREF_CONTEXT, \
+		      (_prefer_context) & 0xffu, \
+		      (_prefer_context) >> 8), \
+	BT_CODEC_DATA(BT_AUDIO_METADATA_TYPE_STREAM_CONTEXT, \
+		      (_context) & 0xffu, \
+		      (_context) >> 8) \
 }
 
 /** @def BT_CODEC_LC3
@@ -312,7 +315,9 @@ enum bt_codec_config_type {
  */
 #define BT_CODEC_LC3_CONFIG_META(_context) \
 { \
-	 BT_CODEC_DATA(BT_CODEC_META_CONTEXT, _context, _context >> 8), \
+	BT_CODEC_DATA(BT_AUDIO_METADATA_TYPE_STREAM_CONTEXT, \
+		      _context, \
+		      _context >> 8), \
 }
 
 /** @def BT_CODEC_LC3_CONFIG_N
