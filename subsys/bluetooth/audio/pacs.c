@@ -681,3 +681,23 @@ int bt_pacs_available_contexts_changed(void)
 
 	return 0;
 }
+
+bool bt_pacs_context_available(enum bt_audio_dir dir, uint16_t context)
+{
+	struct bt_pacs_context available_context;
+	int err;
+
+	err = available_contexts_get(NULL, &available_context);
+	if (err) {
+		BT_DBG("get_available_contexts returned %d", err);
+		return false;
+	}
+
+	if (dir == BT_AUDIO_DIR_SOURCE) {
+		return (context & available_context.src) == context;
+	} else if (dir == BT_AUDIO_DIR_SINK) {
+		return (context & available_context.snk) == context;
+	}
+
+	return false;
+}
