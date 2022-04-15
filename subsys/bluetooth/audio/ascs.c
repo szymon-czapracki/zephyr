@@ -1336,7 +1336,6 @@ static bool ascs_codec_store_metadata(struct bt_data *data, void *user_data)
 
 	return true;
 }
-
 struct ascs_parse_result {
 	int err;
 	size_t count;
@@ -1496,9 +1495,9 @@ static int ascs_verify_metadata(const struct net_buf_simple *buf,
 	return 0;
 }
 
-static int ascs_ep_set_metadata(struct bt_audio_ep *ep,
-				struct net_buf_simple *buf, uint8_t len,
-				struct bt_codec *codec)
+int ascs_ep_set_metadata(struct bt_audio_ep *ep,
+			 struct net_buf_simple *buf, uint8_t len,
+			 struct bt_codec *codec)
 {
 	struct net_buf_simple meta_ltv;
 	int err;
