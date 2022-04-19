@@ -65,6 +65,33 @@ int bt_audio_unicast_server_available_contexts_changed(void)
 	return bt_pacs_available_contexts_changed();
 }
 
+int bt_unicast_server_reconfig(struct bt_audio_stream *stream,
+			       const struct bt_codec *codec)
+{
+	struct bt_audio_ep *ep;
+	int err;
+
+	ep = stream->ep;
+
+	if (unicast_server_cb != NULL &&
+		unicast_server_cb->reconfig != NULL) {
+		err = unicast_server_cb->reconfig(stream, ep->dir, codec,
+						  &ep->qos_pref);
+	} else {
+		err = -ENOTSUP;
+	}
+
+	if (err != 0) {
+		return err;
+	}
+
+	(void)memcpy(&ep->codec, &codec, sizeof(codec));
+
+	ascs_ep_set_state(ep, BT_AUDIO_EP_STATE_CODEC_CONFIGURED);
+
+	return 0;
+}
+
 int bt_unicast_server_start(struct bt_audio_stream *stream)
 {
 	int err;
