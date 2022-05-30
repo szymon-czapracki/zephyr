@@ -1662,22 +1662,22 @@ static int ascs_verify_metadata(const struct net_buf_simple *buf,
 	/* Parse LTV entries */
 	bt_data_parse(&meta_ltv, ascs_parse_metadata, &result);
 
-	/* Check if all entries could be parsed */
-	if (meta_ltv.len != 0) {
-		BT_ERR("Unable to parse Metadata: len %u", meta_ltv.len);
+	// /* Check if all entries could be parsed */
+	// if (meta_ltv.len != 0) {
+	// 	BT_ERR("Unable to parse Metadata: len %u", meta_ltv.len);
 
-		if (meta_ltv.len > 2) {
-			/* Value of the Metadata Type field in error */
-			return meta_ltv.data[2];
-		}
+	// 	if (meta_ltv.len > 2) {
+	// 		/* Value of the Metadata Type field in error */
+	// 		return meta_ltv.data[2];
+	// 	}
 
-		return -EINVAL;
-	}
+	// 	return -EINVAL;
+	// }
 
-	if (result.count >= CONFIG_BT_CODEC_MAX_METADATA_COUNT) {
-		BT_ERR("No slot available for Codec Config Metadata");
-		return -ENOMEM;
-	}
+	// if (result.count >= CONFIG_BT_CODEC_MAX_METADATA_COUNT) {
+	// 	BT_ERR("No slot available for Codec Config Metadata");
+	// 	return -ENOMEM;
+	// }
 
 	return 0;
 }
