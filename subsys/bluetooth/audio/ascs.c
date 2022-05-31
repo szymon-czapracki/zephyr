@@ -1625,20 +1625,20 @@ static bool ascs_parse_metadata(struct bt_data *data, void *user_data)
 			for (uint8_t i = 0; i < data_len; i++) {
 				const uint8_t ccid = data_value[i];
 
-				if (!bt_cap_acceptor_ccid_exist(ep->stream->conn,
-								ccid)) {
-					BT_WARN("CCID %u is unknown", ccid);
+				//if (!bt_cap_acceptor_ccid_exist(ep->stream->conn,
+				//				ccid)) {
+				//	BT_WARN("CCID %u is unknown", ccid);
 
-					/* TBD:
-					 * Should we reject the Metadata?
-					 *
-					 * Should unknown CCIDs trigger a
-					 * discovery procedure for TBS or MCS?
-					 *
-					 * Or should we just accept as is, and
-					 * then let the application decide?
-					 */
-				}
+				//	/* TBD:
+				//	 * Should we reject the Metadata?
+				//	 *
+				//	 * Should unknown CCIDs trigger a
+				//	 * discovery procedure for TBS or MCS?
+				//	 *
+				//	 * Or should we just accept as is, and
+				//	 * then let the application decide?
+				//	 */
+				//}
 			}
 		}
 	}

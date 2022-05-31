@@ -284,7 +284,7 @@ struct bt_tbs_in_uri {
 
 
 struct bt_tbs_instance {
-	struct bt_tbs_client_call_state calls[CONFIG_BT_TBS_CLIENT_MAX_CALLS];
+	struct bt_tbs_client_call_state calls[CONFIG_BT_TBS_MAX_CALLS];
 
 	uint16_t start_handle;
 	uint16_t end_handle;

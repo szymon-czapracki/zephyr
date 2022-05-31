@@ -56,6 +56,9 @@ BT_GATT_SERVICE_DEFINE(cas_svc,
 
 #endif /* CONFIG_BT_CAP_ACCEPTOR_SET_MEMBER */
 
+#if defined(CONFIG_BT_TBS)
+#if defined(CONFIG_BT_TBS_CLIENT)
+
 bool bt_cap_acceptor_ccid_exist(const struct bt_conn *conn, uint8_t ccid)
 {
 	if (bt_tbs_client_get_by_ccid(conn, ccid) != NULL) {
@@ -66,5 +69,7 @@ bool bt_cap_acceptor_ccid_exist(const struct bt_conn *conn, uint8_t ccid)
 
 	return false;
 }
+#endif
+#endif
 
 #endif /* BT_CAP_ACCEPTOR */

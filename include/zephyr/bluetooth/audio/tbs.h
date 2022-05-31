@@ -13,6 +13,10 @@
 #include <zephyr/types.h>
 #include <zephyr/bluetooth/conn.h>
 
+//#if !defined(CONFIG_BT_TBS) || !defined(CONFIG_BT_TBS_CLIENT)
+//#define CONFIG_BT_TBS_MAX_URI_LENGTH 0
+//#endif
+
 /* Call States */
 #define BT_TBS_CALL_STATE_INCOMING                      0x00
 #define BT_TBS_CALL_STATE_DIALING                       0x01
