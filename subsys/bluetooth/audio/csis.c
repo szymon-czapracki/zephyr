@@ -256,7 +256,7 @@ int csis_adv_resume(struct bt_csis *csis)
 
 		(void)memset(&param, 0, sizeof(param));
 		param.options |= BT_LE_ADV_OPT_CONNECTABLE;
-		param.options |= BT_LE_ADV_OPT_SCANNABLE;
+		param.options |= BT_LE_ADV_OPT_EXT_ADV;
 		param.options |= BT_LE_ADV_OPT_USE_NAME;
 
 		param.id = BT_ID_DEFAULT;
