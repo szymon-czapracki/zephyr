@@ -17,6 +17,7 @@
 #include <zephyr/sys/check.h>
 
 #include "has_internal.h"
+#include "../host/conn_internal.h"
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HAS)
 #define LOG_MODULE_NAME bt_has
