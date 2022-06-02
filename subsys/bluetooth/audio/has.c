@@ -185,7 +185,7 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
 {
 	struct has_client *client;
 
-	BT_DBG("conn %p level %d err %d", conn, level, err);
+	BT_DBG("conn %p level %d err %d", (void *)conn, level, err);
 
 	if (err != BT_SECURITY_ERR_SUCCESS) {
 		return;
