@@ -222,6 +222,7 @@ struct bt_codec_data {
  * These values are defined by the Generic Audio Assigned Numbers, bluetooth.com
  */
 enum bt_audio_location {
+	BT_AUDIO_LOCATION_NOT_ALLOWED = 0,
 	BT_AUDIO_LOCATION_FRONT_LEFT = BIT(0),
 	BT_AUDIO_LOCATION_FRONT_RIGHT = BIT(1),
 	BT_AUDIO_LOCATION_FRONT_CENTER = BIT(2),
@@ -250,6 +251,7 @@ enum bt_audio_location {
 	BT_AUDIO_LOCATION_FRONT_RIGHT_WIDE = BIT(25),
 	BT_AUDIO_LOCATION_LEFT_SURROUND = BIT(26),
 	BT_AUDIO_LOCATION_RIGHT_SURROUND = BIT(27),
+	BT_AUDIO_LOCATION_RFU_START = BIT(28),
 };
 
 /** @brief Codec structure. */
