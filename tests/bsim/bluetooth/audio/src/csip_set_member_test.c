@@ -12,10 +12,21 @@
 static struct bt_csip_set_member_svc_inst *svc_inst;
 extern enum bst_result_t bst_result;
 static volatile bool g_locked;
+static volatile bool g_sirk_read;
+static bool unranked;
+CREATE_FLAG(disc);
 static uint8_t sirk_read_req_rsp = BT_CSIP_READ_SIRK_REQ_RSP_ACCEPT;
 struct bt_csip_set_member_register_param param = {
 	.set_size = 3,
 	.rank = 1,
+	.lockable = true,
+	/* Using the CSIS test sample SIRK */
+	.set_sirk = { 0xcd, 0xcc, 0x72, 0xdd, 0x86, 0x8c, 0xcd, 0xce,
+		      0x22, 0xfd, 0xa1, 0x21, 0x09, 0x7d, 0x7d, 0x45 },
+};
+
+struct bt_csip_set_member_register_param param_unranked = {
+	.set_size = 3,
 	.lockable = true,
 	/* Using the CSIS test sample SIRK */
 	.set_sirk = { 0xcd, 0xcc, 0x72, 0xdd, 0x86, 0x8c, 0xcd, 0xce,
@@ -31,6 +42,8 @@ static void csip_disconnected(struct bt_conn *conn, uint8_t reason)
 	} else {
 		FAIL("Client disconnected unexpectedly (0x%02x)\n", reason);
 	}
+
+	SET_FLAG(disc);
 }
 
 static void csip_lock_changed_cb(struct bt_conn *conn,
@@ -44,6 +57,7 @@ static void csip_lock_changed_cb(struct bt_conn *conn,
 static uint8_t sirk_read_req_cb(struct bt_conn *conn,
 				struct bt_csip_set_member_svc_inst *svc_inst)
 {
+	g_sirk_read = true;
 	return sirk_read_req_rsp;
 }
 
@@ -68,11 +82,19 @@ static void bt_ready(int err)
 	printk("Audio Server: Bluetooth initialized\n");
 
 	param.cb = &csip_cbs;
-
-	err = bt_csip_set_member_register(&param, &svc_inst);
-	if (err != 0) {
-		FAIL("Could not register CSIP (err %d)\n", err);
-		return;
+	
+	if (unranked) {
+		err = bt_csip_set_member_register(&param_unranked, &svc_inst);
+		if (err != 0) {
+			FAIL("Could not register CSIP (err %d)\n", err);
+			return;
+		}
+	} else {
+		err = bt_csip_set_member_register(&param, &svc_inst);
+		if (err != 0) {
+			FAIL("Could not register CSIP (err %d)\n", err);
+			return;
+		}
 	}
 
 	err = bt_csip_set_member_generate_rsi(svc_inst, rsi);
@@ -103,6 +125,70 @@ static void test_main(void)
 	}
 
 	bt_conn_cb_register(&conn_callbacks);
+}
+
+static void test_disc(void)
+{
+	int err;
+
+	err = bt_enable(bt_ready);
+
+	if (err != 0) {
+		FAIL("Bluetooth init failed (err %d)\n", err);
+		return;
+	}
+
+	bt_conn_cb_register(&conn_callbacks);
+
+	PASS();
+}
+
+static void test_non_lockable(void)
+{
+	int err;
+
+	err = bt_enable(bt_ready);
+
+	if (err != 0) {
+		FAIL("Bluetooth init failed (err %d)\n", err);
+		return;
+	}
+
+	bt_conn_cb_register(&conn_callbacks);
+
+	PASS();
+}
+
+static void test_unranked(void)
+{
+	int err;
+
+	err = bt_enable(bt_ready);
+
+	if (err != 0) {
+		FAIL("Bluetooth init failed (err %d)\n", err);
+		return;
+	}
+
+	bt_conn_cb_register(&conn_callbacks);
+
+	PASS();
+}
+
+static void test_sirk(void)
+{
+	int err;
+
+	err = bt_enable(bt_ready);
+
+	if (err != 0) {
+		FAIL("Bluetooth init failed (err %d)\n", err);
+		return;
+	}
+
+	bt_conn_cb_register(&conn_callbacks);
+
+	PASS();
 }
 
 static void test_force_release(void)
@@ -141,6 +227,8 @@ static void test_args(int argc, char *argv[])
 			param.rank = strtol(argv[++argn], NULL, 10);
 		} else if (strcmp(arg, "not-lockable") == 0) {
 			param.lockable = false;
+		} else if (strcmp(arg, "unranked") == 0) {
+			unranked = true;
 		} else if (strcmp(arg, "sirk") == 0) {
 			size_t len;
 
@@ -178,6 +266,27 @@ static const struct bst_test_instance test_connect[] = {
 		.test_post_init_f = test_init,
 		.test_tick_f = test_tick,
 		.test_main_f = test_csip_enc,
+		.test_args_f = test_args,
+	},
+	{
+		.test_id = "csip_set_member_disc",
+		.test_post_init_f = test_init,
+		.test_tick_f = test_tick,
+		.test_main_f = test_disc,
+		.test_args_f = test_args,
+	},
+	{
+		.test_id = "csip_set_member_sirk",
+		.test_post_init_f = test_init,
+		.test_tick_f = test_tick,
+		.test_main_f = test_sirk,
+		.test_args_f = test_args,
+	},
+	{
+		.test_id = "csip_set_member_unranked",
+		.test_post_init_f = test_init,
+		.test_tick_f = test_tick,
+		.test_main_f = test_unranked,
 		.test_args_f = test_args,
 	},
 

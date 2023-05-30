@@ -6,12 +6,15 @@
  */
 #ifdef CONFIG_BT_CSIP_SET_COORDINATOR
 #include <zephyr/bluetooth/addr.h>
+#include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/audio/csip.h>
 #include "common.h"
 
 static bool expect_rank = true;
 static bool expect_set_size = true;
 static bool expect_lockable = true;
+static bool expect_valid_sirk = true;
+static bool unranked = false;
 
 extern enum bst_result_t bst_result;
 static volatile bool discovered;
@@ -207,10 +210,15 @@ static struct bt_le_scan_cb csip_set_coordinator_scan_callbacks = {
 
 static void discover_members_timer_handler(struct k_work *work)
 {
-	if (inst->info.set_size > 0) {
-		FAIL("Could not find all members (%u / %u)\n", members_found, inst->info.set_size);
+	if (expect_valid_sirk == false) {
+		PASS("Could not find all members (%u / %u)\n", members_found, inst->info.set_size);
 	} else {
+		if (inst->info.set_size > 0) {
+		
+		FAIL("Could not find all members (%u / %u)\n", members_found, inst->info.set_size);
+		} else {
 		discover_timed_out = true;
+		}
 	}
 }
 
@@ -231,10 +239,12 @@ static void ordered_access(const struct bt_csip_set_coordinator_set_member **mem
 	err = bt_csip_set_coordinator_ordered_access(members, count,
 						     &inst->info,
 						     csip_set_coordinator_oap_cb);
-	if (err != 0) {
+	if (err != 0 && unranked == false) {
 		FAIL("Failed to do CSIP set coordinator ordered access (%d)",
 		      err);
 		return;
+	} else {
+		PASS("Failed to do CSIP set coordinator ordered access (%d)\n", err);
 	}
 
 	if (expect_locked) {
@@ -242,6 +252,210 @@ static void ordered_access(const struct bt_csip_set_coordinator_set_member **mem
 	} else {
 		WAIT_FOR_COND(ordered_access_unlocked);
 	}
+}
+
+static void test_disc(void)
+{
+	int err;
+	char addr[BT_ADDR_LE_STR_LEN];
+	const struct bt_csip_set_coordinator_set_member *locked_members[CONFIG_BT_MAX_CONN];
+	uint8_t connected_member_count = 0;
+
+	err = bt_enable(NULL);
+	if (err != 0) {
+		FAIL("Bluetooth init failed (err %d)\n", err);
+		return;
+	}
+
+	printk("Audio Client: Bluetooth initialized\n");
+
+	bt_csip_set_coordinator_register_cb(&cbs);
+	k_work_init_delayable(&discover_members_timer,
+			      discover_members_timer_handler);
+	bt_le_scan_cb_register(&csip_set_coordinator_scan_callbacks);
+
+	err = bt_le_scan_start(BT_LE_SCAN_PASSIVE, NULL);
+	if (err != 0) {
+		FAIL("Scanning failed to start (err %d)\n", err);
+		return;
+	}
+
+	printk("Scanning successfully started\n");
+
+	WAIT_FOR_COND(members_found == 1);
+
+	printk("Stopping scan\n");
+	err = bt_le_scan_stop();
+	if (err != 0) {
+		FAIL("Could not stop scan");
+		return;
+	}
+
+	bt_addr_le_to_str(&addr_found[0], addr, sizeof(addr));
+	err = bt_conn_le_create(&addr_found[0], BT_CONN_LE_CREATE_CONN,
+				BT_LE_CONN_PARAM_DEFAULT, &conns[0]);
+	if (err != 0) {
+		FAIL("Failed to connect to %s: %d\n", err);
+		return;
+	}
+	printk("Connecting to %s\n", addr);
+
+	WAIT_FOR_FLAG(flag_connected);
+	connected_member_count++;
+
+	err = bt_csip_set_coordinator_discover(conns[0]);
+	if (err != 0) {
+		FAIL("Failed to initialize set coordinator for connection %d\n",
+		     err);
+		return;
+	}
+
+	WAIT_FOR_COND(discovered);
+
+	err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, NULL);
+	if (err != 0) {
+		FAIL("Could not start scan: %d", err);
+		return;
+	}
+
+	err = k_work_reschedule(&discover_members_timer,
+				BT_CSIP_SET_COORDINATOR_DISCOVER_TIMER_VALUE);
+	if (err < 0) { /* Can return 0, 1 and 2 for success */
+		FAIL("Could not schedule discover_members_timer %d", err);
+		return;
+	}
+
+	if (inst->info.set_size > 0) {
+		WAIT_FOR_COND(members_found == inst->info.set_size);
+
+		(void)k_work_cancel_delayable(&discover_members_timer);
+	} else {
+		WAIT_FOR_COND(discover_timed_out);
+	}
+
+	err = bt_le_scan_stop();
+	if (err != 0) {
+		FAIL("Scanning failed to stop (err %d)\n", err);
+		return;
+	}
+
+	for (uint8_t i = 1; i < members_found; i++) {
+		bt_addr_le_to_str(&addr_found[i], addr, sizeof(addr));
+
+		UNSET_FLAG(flag_connected);
+		printk("Connecting to member[%d] (%s)", i, addr);
+		err = bt_conn_le_create(&addr_found[i],
+					BT_CONN_LE_CREATE_CONN,
+					BT_LE_CONN_PARAM_DEFAULT,
+					&conns[i]);
+		if (err != 0) {
+			FAIL("Failed to connect to %s: %d\n", addr, err);
+			return;
+		}
+
+		printk("Connected to %s\n", addr);
+		WAIT_FOR_FLAG(flag_connected);
+		connected_member_count++;
+
+		discovered = false;
+		printk("Doing discovery on member[%u]", i);
+		err = bt_csip_set_coordinator_discover(conns[i]);
+		if (err != 0) {
+			FAIL("Failed to initialize set coordinator for connection %d\n",
+			      err);
+			return;
+		}
+
+		WAIT_FOR_COND(discovered);
+	}
+
+	for (size_t i = 0; i < ARRAY_SIZE(locked_members); i++) {
+		locked_members[i] = set_members[i];
+	}
+
+	if (inst->info.rank != 0U) {
+		ordered_access(locked_members, connected_member_count, false);
+	}
+
+	/* Now disconnect one of the members */
+	bt_conn_disconnect(conns[0], BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+
+	if (inst->info.lockable) {
+		printk("Locking set\n");
+		err = bt_csip_set_coordinator_lock(locked_members, connected_member_count,
+						   &inst->info);
+		if (err != 0) {
+			PASS("Failed to do set coordinator lock (%d)\n", err);
+			return;
+		}
+
+		WAIT_FOR_COND(set_locked);
+	}
+
+	if (inst->info.rank != 0U) {
+		ordered_access(locked_members, connected_member_count, inst->info.lockable);
+	}
+
+	k_sleep(K_MSEC(1000)); /* Simulate doing stuff */
+
+	if (inst->info.lockable) {
+		printk("Releasing set\n");
+		err = bt_csip_set_coordinator_release(locked_members, connected_member_count,
+						      &inst->info);
+		if (err != 0) {
+			FAIL("Failed to do set coordinator release (%d)", err);
+			return;
+		}
+
+		WAIT_FOR_COND(set_unlocked);
+	}
+
+	if (inst->info.rank != 0U) {
+		ordered_access(locked_members, connected_member_count, false);
+	}
+
+	if (inst->info.lockable) {
+		/* Lock and unlock again */
+		set_locked = false;
+		set_unlocked = false;
+
+		printk("Locking set\n");
+		err = bt_csip_set_coordinator_lock(locked_members, connected_member_count,
+						   &inst->info);
+		if (err != 0) {
+			FAIL("Failed to do set coordinator lock (%d)", err);
+			return;
+		}
+
+		WAIT_FOR_COND(set_locked);
+	}
+
+	k_sleep(K_MSEC(1000)); /* Simulate doing stuff */
+
+	if (inst->info.lockable) {
+		printk("Releasing set\n");
+		err = bt_csip_set_coordinator_release(locked_members, connected_member_count,
+						      &inst->info);
+		if (err != 0) {
+			FAIL("Failed to do set coordinator release (%d)", err);
+			return;
+		}
+
+		WAIT_FOR_COND(set_unlocked);
+	}
+
+	for (uint8_t i = 0; i < members_found; i++) {
+		printk("Disconnecting member[%u] (%s)", i, addr);
+		err = bt_conn_disconnect(conns[i],
+					 BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+		(void)memset(&set_members[i], 0, sizeof(set_members[i]));
+		if (err != 0) {
+			FAIL("Failed to do disconnect\n", err);
+			return;
+		}
+	}
+
+	PASS("All members disconnected\n");
 }
 
 static void test_main(void)
@@ -445,6 +659,95 @@ static void test_main(void)
 	PASS("All members disconnected\n");
 }
 
+static void test_unranked(void)
+{
+	int err;
+	char addr[BT_ADDR_LE_STR_LEN];
+	const struct bt_csip_set_coordinator_set_member *locked_members[CONFIG_BT_MAX_CONN];
+	uint8_t connected_member_count = 0;
+
+	err = bt_enable(NULL);
+	if (err != 0) {
+		FAIL("Bluetooth init failed (err %d)\n", err);
+		return;
+	}
+
+	printk("Audio Client: Bluetooth initialized\n");
+
+	bt_csip_set_coordinator_register_cb(&cbs);
+	k_work_init_delayable(&discover_members_timer,
+			      discover_members_timer_handler);
+	bt_le_scan_cb_register(&csip_set_coordinator_scan_callbacks);
+
+	err = bt_le_scan_start(BT_LE_SCAN_PASSIVE, NULL);
+	if (err != 0) {
+		FAIL("Scanning failed to start (err %d)\n", err);
+		return;
+	}
+
+	printk("Scanning successfully started\n");
+
+	WAIT_FOR_COND(members_found == 1);
+
+	printk("Stopping scan\n");
+	err = bt_le_scan_stop();
+	if (err != 0) {
+		FAIL("Could not stop scan");
+		return;
+	}
+
+	bt_addr_le_to_str(&addr_found[0], addr, sizeof(addr));
+	err = bt_conn_le_create(&addr_found[0], BT_CONN_LE_CREATE_CONN,
+				BT_LE_CONN_PARAM_DEFAULT, &conns[0]);
+	if (err != 0) {
+		FAIL("Failed to connect to %s: %d\n", err);
+		return;
+	}
+	printk("Connecting to %s\n", addr);
+
+	WAIT_FOR_FLAG(flag_connected);
+	connected_member_count++;
+
+	err = bt_csip_set_coordinator_discover(conns[0]);
+	if (err != 0) {
+		FAIL("Failed to initialize set coordinator for connection %d\n",
+		     err);
+		return;
+	}
+
+	WAIT_FOR_COND(discovered);
+
+	err = bt_le_scan_start(BT_LE_SCAN_ACTIVE, NULL);
+	if (err != 0) {
+		FAIL("Could not start scan: %d", err);
+		return;
+	}
+
+	err = k_work_reschedule(&discover_members_timer,
+				BT_CSIP_SET_COORDINATOR_DISCOVER_TIMER_VALUE);
+	if (err < 0) { /* Can return 0, 1 and 2 for success */
+		FAIL("Could not schedule discover_members_timer %d", err);
+		return;
+	}
+
+	if (inst->info.set_size > 0) {
+		WAIT_FOR_COND(members_found == inst->info.set_size);
+
+		(void)k_work_cancel_delayable(&discover_members_timer);
+	} else {
+		WAIT_FOR_COND(discover_timed_out);
+	}
+
+	err = bt_le_scan_stop();
+	if (err != 0) {
+		FAIL("Scanning failed to stop (err %d)\n", err);
+		return;
+	}
+
+	ordered_access(locked_members, connected_member_count, false);
+}
+
+
 static void test_args(int argc, char *argv[])
 {
 	for (int argn = 0; argn < argc; argn++) {
@@ -456,6 +759,10 @@ static void test_args(int argc, char *argv[])
 			expect_rank = false;
 		} else if (strcmp(arg, "no-lock") == 0) {
 			expect_lockable = false;
+		} else if (strcmp(arg, "inv_sirk") == 0) {
+			expect_valid_sirk = false;
+		} else if (strcmp(arg, "unranked") == 0) {
+			unranked = true;
 		} else {
 			FAIL("Invalid arg: %s", arg);
 		}
@@ -469,6 +776,20 @@ static const struct bst_test_instance test_connect[] = {
 		.test_post_init_f = test_init,
 		.test_tick_f = test_tick,
 		.test_main_f = test_main,
+		.test_args_f = test_args,
+	},
+	{
+		.test_id = "csip_set_coordinator_disc",
+		.test_post_init_f = test_init,
+		.test_tick_f = test_tick,
+		.test_main_f = test_disc,
+		.test_args_f = test_args,
+	},
+	{
+		.test_id = "csip_set_coordinator_unranked",
+		.test_post_init_f = test_init,
+		.test_tick_f = test_tick,
+		.test_main_f = test_unranked,
 		.test_args_f = test_args,
 	},
 
